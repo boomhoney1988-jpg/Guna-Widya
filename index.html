@@ -1,0 +1,1431 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Informasi Perpustakaan (SIPUS)</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SheetJS CDN for CSV/Excel Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0284c7',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .sidebar-item-active {
+            background-color: #0284c7;
+            color: white;
+        }
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            body { background: white; color: black; }
+        }
+        .print-only { display: none; }
+    </style>
+</head>
+<body class="bg-slate-50 font-sans text-slate-800 antialiased min-h-screen flex flex-col">
+
+    <div id="app" class="flex-1 flex flex-col md:flex-row min-h-screen">
+        
+        <!-- SIDEBAR NAVIGATION -->
+        <aside class="no-print w-full md:w-64 bg-slate-900 text-slate-300 flex-shrink-0 flex flex-col justify-between shadow-xl">
+            <div>
+                <!-- Brand Header -->
+                <div class="p-5 flex items-center gap-3 border-b border-slate-800">
+                    <div class="w-10 h-10 rounded-lg bg-brand-600 flex items-center justify-center text-white text-xl font-bold shadow-md shadow-brand-600/30" id="sidebarLogoContainer">
+                        <i class="fa-solid fa-book-bookmark"></i>
+                    </div>
+                    <div class="overflow-hidden">
+                        <h1 class="font-bold text-white text-base leading-tight truncate" id="sidebarLibName">SIPUS Digital</h1>
+                        <p class="text-xs text-slate-400 truncate">Sistem Perpustakaan</p>
+                    </div>
+                </div>
+
+                <!-- Navigation Links -->
+                <nav class="p-4 space-y-1">
+                    <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition text-left hover:bg-slate-800 hover:text-white sidebar-item-active">
+                        <i class="fa-solid fa-chart-pie w-5"></i> Dashboard
+                    </button>
+                    <button onclick="switchTab('katalog')" id="nav-katalog" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition text-left hover:bg-slate-800 hover:text-white text-slate-400">
+                        <i class="fa-solid fa-book w-5"></i> Katalog & Eksemplar
+                    </button>
+                    <button onclick="switchTab('peminjaman')" id="nav-peminjaman" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition text-left hover:bg-slate-800 hover:text-white text-slate-400">
+                        <i class="fa-solid fa-handshake w-5"></i> Peminjaman & Denda
+                    </button>
+                    <button onclick="switchTab('laporan')" id="nav-laporan" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition text-left hover:bg-slate-800 hover:text-white text-slate-400">
+                        <i class="fa-solid fa-file-invoice-dollar w-5"></i> Laporan Transaksi
+                    </button>
+                    <button onclick="switchTab('profil')" id="nav-profil" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition text-left hover:bg-slate-800 hover:text-white text-slate-400">
+                        <i class="fa-solid fa-building-columns w-5"></i> Profil Perpustakaan
+                    </button>
+                </nav>
+            </div>
+
+            <!-- Footer Sidebar Info -->
+            <div class="p-4 border-t border-slate-800 text-xs text-slate-500">
+                <p class="font-medium text-slate-400" id="sidebarFooterName">Perpustakaan Umum</p>
+                <p>Status: <span class="text-emerald-400 font-semibold">Online (Lokal)</span></p>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT AREA -->
+        <main class="flex-1 flex flex-col min-w-0 bg-slate-50">
+            
+            <!-- Top App Bar -->
+            <header class="no-print bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between shadow-sm">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-800" id="pageTitle">Dashboard Ringkasan</h2>
+                    <p class="text-xs text-slate-500">Kelola operasional dan inventarisasi perpustakaan secara real-time</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="text-xs bg-slate-100 px-3 py-1.5 rounded-full font-medium text-slate-600 border border-slate-200 flex items-center gap-1.5">
+                        <i class="fa-regular fa-calendar-check text-brand-600"></i>
+                        <span id="currentDateDisplay">--</span>
+                    </span>
+                </div>
+            </header>
+
+            <div class="p-6 flex-1 overflow-y-auto">
+
+                <!-- 1. DASHBOARD VIEW -->
+                <section id="view-dashboard" class="tab-content space-y-6">
+                    <!-- KPI Cards -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                        <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm flex items-center justify-between">
+                            <div>
+                                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Judul Buku Unique</p>
+                                <h3 class="text-2xl font-bold text-slate-800 mt-1" id="kpi-total-titles">0</h3>
+                                <p class="text-xs text-emerald-600 font-medium mt-1"><i class="fa-solid fa-layer-group"></i> Katalog Terdaftar</p>
+                            </div>
+                            <div class="w-12 h-12 bg-blue-50 text-brand-600 rounded-xl flex items-center justify-center text-xl">
+                                <i class="fa-solid fa-book-bookmark"></i>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm flex items-center justify-between">
+                            <div>
+                                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Eksemplar</p>
+                                <h3 class="text-2xl font-bold text-slate-800 mt-1" id="kpi-total-copies">0</h3>
+                                <p class="text-xs text-indigo-600 font-medium mt-1"><i class="fa-solid fa-boxes-stacked"></i> Fisik Buku Tersedia</p>
+                            </div>
+                            <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center text-xl">
+                                <i class="fa-solid fa-cubes"></i>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm flex items-center justify-between">
+                            <div>
+                                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Sedang Dipinjam</p>
+                                <h3 class="text-2xl font-bold text-amber-600 mt-1" id="kpi-active-loans">0</h3>
+                                <p class="text-xs text-amber-600 font-medium mt-1"><i class="fa-solid fa-clock"></i> Peminjaman Aktif</p>
+                            </div>
+                            <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center text-xl">
+                                <i class="fa-solid fa-handshake-simple"></i>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm flex items-center justify-between">
+                            <div>
+                                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Denda Terkumpul</p>
+                                <h3 class="text-2xl font-bold text-emerald-600 mt-1" id="kpi-total-fines">Rp 0</h3>
+                                <p class="text-xs text-emerald-600 font-medium mt-1"><i class="fa-solid fa-coins"></i> Pendapatan Denda</p>
+                            </div>
+                            <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-xl">
+                                <i class="fa-solid fa-wallet"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Overview Tables -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Recent Overdue / Active Loans -->
+                        <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="font-bold text-slate-800 text-base flex items-center gap-2">
+                                    <i class="fa-solid fa-triangle-exclamation text-amber-500"></i> Peminjaman Aktif & Jatuh Tempo
+                                </h3>
+                                <button onclick="switchTab('peminjaman')" class="text-xs font-semibold text-brand-600 hover:underline">Lihat Semua</button>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left text-xs">
+                                    <thead class="bg-slate-50 text-slate-500 border-b border-slate-200">
+                                        <tr>
+                                            <th class="p-2.5 font-semibold">Peminjam</th>
+                                            <th class="p-2.5 font-semibold">Judul Buku</th>
+                                            <th class="p-2.5 font-semibold">Jatuh Tempo</th>
+                                            <th class="p-2.5 font-semibold text-right">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="dash-loans-tbody" class="divide-y divide-slate-100">
+                                        <!-- Dynamic JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Top Aggregated Books -->
+                        <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="font-bold text-slate-800 text-base flex items-center gap-2">
+                                    <i class="fa-solid fa-list-ol text-brand-600"></i> Ringkasan Stok Populer
+                                </h3>
+                                <button onclick="switchTab('katalog')" class="text-xs font-semibold text-brand-600 hover:underline">Kelola Katalog</button>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left text-xs">
+                                    <thead class="bg-slate-50 text-slate-500 border-b border-slate-200">
+                                        <tr>
+                                            <th class="p-2.5 font-semibold">Judul Buku</th>
+                                            <th class="p-2.5 font-semibold text-center">Total Fisik</th>
+                                            <th class="p-2.5 font-semibold text-center">Tersedia</th>
+                                            <th class="p-2.5 font-semibold text-center">Dipinjam</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="dash-stock-tbody" class="divide-y divide-slate-100">
+                                        <!-- Dynamic JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 2. KATALOG & EKSEMPLAR VIEW -->
+                <section id="view-katalog" class="tab-content hidden space-y-6">
+                    <!-- Action Bar -->
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm">
+                        <div class="relative w-full sm:w-80">
+                            <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-400 text-sm"></i>
+                            <input type="text" id="catalog-search" oninput="renderCatalog()" placeholder="Cari judul, pengarang, nomor inventaris..." class="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-500">
+                        </div>
+                        <button onclick="openBookModal()" class="w-full sm:w-auto px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition shadow-md shadow-brand-600/20">
+                            <i class="fa-solid fa-plus"></i> Tambah Item / Eksemplar Buku
+                        </button>
+                    </div>
+
+                    <!-- Aggregated Stock Summary Table -->
+                    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+                        <div class="p-4 border-b border-slate-200 bg-slate-50/50 flex justify-between items-center">
+                            <h3 class="font-bold text-slate-800 text-sm flex items-center gap-2">
+                                <i class="fa-solid fa-table-cells text-brand-600"></i> Ringkasan Stok & Eksemplar Agregat (Judul Sama)
+                            </h3>
+                            <span class="text-xs text-slate-500">Otomatis menggabungkan buku bermerek/judul sama</span>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs">
+                                <thead class="bg-slate-100 text-slate-600 font-semibold border-b border-slate-200">
+                                    <tr>
+                                        <th class="p-3.5">Sampul</th>
+                                        <th class="p-3.5">Judul Buku & Pengarang</th>
+                                        <th class="p-3.5 text-center">Tahun</th>
+                                        <th class="p-3.5 text-center">Eksemplar Tersedia</th>
+                                        <th class="p-3.5 text-center">Dipinjam</th>
+                                        <th class="p-3.5">Daftar Kode Inventaris (Status)</th>
+                                        <th class="p-3.5 text-center">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="catalog-aggregated-tbody" class="divide-y divide-slate-100">
+                                    <!-- Dynamic JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3. PEMINJAMAN & PENGEMBALIAN VIEW -->
+                <section id="view-peminjaman" class="tab-content hidden space-y-6">
+                    <!-- Form Transaksi Baru Bar -->
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm">
+                        <div>
+                            <h3 class="font-bold text-slate-800 text-sm">Manajemen Transaksi Peminjaman</h3>
+                            <p class="text-xs text-slate-500">Kelola peminjaman aktif, tanggal pengembalian, dan denda terlambat</p>
+                        </div>
+                        <button onclick="openLoanModal()" class="w-full sm:w-auto px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition shadow-md shadow-brand-600/20">
+                            <i class="fa-solid fa-handshake-angle"></i> Transaksi Peminjaman Baru
+                        </button>
+                    </div>
+
+                    <!-- Active Loans Table -->
+                    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+                        <div class="p-4 border-b border-slate-200 bg-slate-50/50 flex justify-between items-center">
+                            <h3 class="font-bold text-slate-800 text-sm">Daftar Peminjaman Aktif</h3>
+                            <div class="flex items-center gap-2">
+                                <input type="text" id="loan-search" oninput="renderLoans()" placeholder="Cari peminjam / kode..." class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none">
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs">
+                                <thead class="bg-slate-100 text-slate-600 font-semibold border-b border-slate-200">
+                                    <tr>
+                                        <th class="p-3.5">ID Transaksi</th>
+                                        <th class="p-3.5">Peminjam</th>
+                                        <th class="p-3.5">Judul Buku (No. Inventaris)</th>
+                                        <th class="p-3.5">Tgl Pinjam</th>
+                                        <th class="p-3.5">Jatuh Tempo</th>
+                                        <th class="p-3.5 text-center">Terlambat (Hari Kerja)</th>
+                                        <th class="p-3.5 text-center">Estimasi Denda</th>
+                                        <th class="p-3.5 text-center">Status</th>
+                                        <th class="p-3.5 text-center">Aksi / Kembalikan</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="active-loans-tbody" class="divide-y divide-slate-100">
+                                    <!-- Dynamic JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 4. LAPORAN VIEW -->
+                <section id="view-laporan" class="tab-content hidden space-y-6">
+                    <!-- Filter and Download Actions -->
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
+                        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+                            <div>
+                                <h3 class="font-bold text-slate-800 text-base">Laporan Transaksi & Pengembalian</h3>
+                                <p class="text-xs text-slate-500">Filter berdasarkan bulan dan tahun untuk mendownload rekapitulasi</p>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <button onclick="exportToExcel()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold flex items-center gap-2 transition">
+                                    <i class="fa-solid fa-file-excel"></i> Export Excel
+                                </button>
+                                <button onclick="printReport()" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-semibold flex items-center gap-2 transition">
+                                    <i class="fa-solid fa-print"></i> Cetak PDF / Print
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Filter Controls -->
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-600 mb-1">Pilih Bulan</label>
+                                <select id="report-month-filter" onchange="renderReports()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none">
+                                    <option value="ALL">Semua Bulan</option>
+                                    <option value="0">Januari</option>
+                                    <option value="1">Februari</option>
+                                    <option value="2">Maret</option>
+                                    <option value="3">April</option>
+                                    <option value="4">Mei</option>
+                                    <option value="5">Juni</option>
+                                    <option value="6">Juli</option>
+                                    <option value="7">Agustus</option>
+                                    <option value="8">September</option>
+                                    <option value="9">Oktober</option>
+                                    <option value="10">November</option>
+                                    <option value="11">Desember</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-600 mb-1">Pilih Tahun</label>
+                                <select id="report-year-filter" onchange="renderReports()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none">
+                                    <option value="ALL">Semua Tahun</option>
+                                    <option value="2024">2024</option>
+                                    <option value="2025">2025</option>
+                                    <option value="2026" selected>2026</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-600 mb-1">Status Transaksi</label>
+                                <select id="report-status-filter" onchange="renderReports()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none">
+                                    <option value="ALL">Semua Status</option>
+                                    <option value="DIPINJAM">Masih Dipinjam</option>
+                                    <option value="DIKEMBALIKAN">Sudah Dikembalikan</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Report Table Header Info (Print View Header) -->
+                    <div class="print-only mb-6 text-center border-b pb-4">
+                        <h1 class="text-2xl font-bold uppercase" id="printHeaderLibName">Perpustakaan</h1>
+                        <p class="text-xs text-slate-600" id="printHeaderAddress">Alamat Perpustakaan</p>
+                        <p class="text-xs text-slate-600" id="printHeaderContact">Kontak / Telp</p>
+                        <h2 class="text-lg font-bold mt-4 uppercase underline">Laporan Peminjaman & Pengembalian Buku</h2>
+                    </div>
+
+                    <!-- Summary Stat Box in Laporan -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div class="bg-white p-4 rounded-xl border border-slate-200 text-center">
+                            <span class="text-xs text-slate-500">Total Transaksi Sesuai Filter</span>
+                            <h4 class="text-xl font-bold text-slate-800" id="report-stat-count">0</h4>
+                        </div>
+                        <div class="bg-white p-4 rounded-xl border border-slate-200 text-center">
+                            <span class="text-xs text-slate-500">Total Buku Selesai Kembalikan</span>
+                            <h4 class="text-xl font-bold text-indigo-600" id="report-stat-returned">0</h4>
+                        </div>
+                        <div class="bg-white p-4 rounded-xl border border-slate-200 text-center">
+                            <span class="text-xs text-slate-500">Total Penerimaan Denda</span>
+                            <h4 class="text-xl font-bold text-emerald-600" id="report-stat-fines">Rp 0</h4>
+                        </div>
+                    </div>
+
+                    <!-- Main Report Table -->
+                    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs" id="report-table">
+                                <thead class="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200">
+                                    <tr>
+                                        <th class="p-3">No</th>
+                                        <th class="p-3">Peminjam</th>
+                                        <th class="p-3">Judul Buku</th>
+                                        <th class="p-3">Kode Inventaris</th>
+                                        <th class="p-3">Tgl Pinjam</th>
+                                        <th class="p-3">Jatuh Tempo</th>
+                                        <th class="p-3">Tgl Kembali</th>
+                                        <th class="p-3 text-right">Denda (Rp)</th>
+                                        <th class="p-3 text-center">Catatan Denda</th>
+                                        <th class="p-3 text-center">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="report-tbody" class="divide-y divide-slate-100">
+                                    <!-- Dynamic JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 5. PROFIL PERPUSTAKAAN VIEW -->
+                <section id="view-profil" class="tab-content hidden space-y-6">
+                    <div class="max-w-3xl mx-auto bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+                        <div class="p-6 bg-slate-900 text-white flex items-center justify-between">
+                            <div>
+                                <h3 class="text-lg font-bold">Profil & Identitas Perpustakaan</h3>
+                                <p class="text-xs text-slate-400">Pengaturan ini akan ditampilkan pada kop laporan dan aplikasi</p>
+                            </div>
+                            <i class="fa-solid fa-building-columns text-3xl text-brand-500"></i>
+                        </div>
+                        
+                        <form id="profile-form" onsubmit="saveProfile(event)" class="p-6 space-y-5">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">Nama Perpustakaan</label>
+                                <input type="text" id="prof-name" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-700 mb-1">Nomor Telepon / Kontak</label>
+                                    <input type="text" id="prof-phone" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-700 mb-1">Jam Operasional</label>
+                                    <input type="text" id="prof-hours" placeholder="Senin - Jumat, 08:00 - 16:00" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">Alamat Lengkap</label>
+                                <textarea id="prof-address" rows="3" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none"></textarea>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">URL Logo Perpustakaan (Opsional)</label>
+                                <input type="url" id="prof-logo" placeholder="https://..." class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                            </div>
+
+                            <div class="pt-4 border-t border-slate-100 flex justify-end">
+                                <button type="submit" class="px-6 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl text-xs shadow-md shadow-brand-600/20 transition flex items-center gap-2">
+                                    <i class="fa-solid fa-floppy-disk"></i> Simpan Perubahan Profil
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+
+    <!-- MODAL 1: ADD/EDIT BOOK COPY -->
+    <div id="book-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden transform transition-all">
+            <div class="p-5 bg-slate-900 text-white flex justify-between items-center">
+                <h3 class="font-bold text-base" id="book-modal-title">Tambah Eksemplar Buku Baru</h3>
+                <button onclick="closeBookModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form id="book-form" onsubmit="handleBookSubmit(event)" class="p-6 space-y-4">
+                <input type="hidden" id="book-edit-id">
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Judul Buku <span class="text-red-500">*</span></label>
+                    <input type="text" id="book-title" placeholder="Contoh: Laskar Pelangi" required class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                    <p class="text-[10px] text-slate-500 mt-1">Buku dengan nama judul yang persis sama akan dihitung secara agregat dalam satu stok stok.</p>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Nomor Inventaris (Kode Unik) <span class="text-red-500">*</span></label>
+                    <input type="text" id="book-code" placeholder="Contoh: INV-2026-001" required class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Pengarang <span class="text-red-500">*</span></label>
+                        <input type="text" id="book-author" placeholder="Nama Penulis" required class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Tahun Terbit <span class="text-red-500">*</span></label>
+                        <input type="number" id="book-year" min="1900" max="2099" placeholder="2023" required class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">URL Sampul Buku (Opsional)</label>
+                    <input type="url" id="book-cover" placeholder="https://images.unsplash.com/..." class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                </div>
+
+                <div class="pt-3 flex justify-end gap-2 border-t border-slate-100">
+                    <button type="button" onclick="closeBookModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-xs">Batal</button>
+                    <button type="submit" class="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl text-xs shadow-md shadow-brand-600/20">Simpan Buku</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 2: NEW LOAN -->
+    <div id="loan-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden">
+            <div class="p-5 bg-slate-900 text-white flex justify-between items-center">
+                <h3 class="font-bold text-base">Form Peminjaman Buku</h3>
+                <button onclick="closeLoanModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form id="loan-form" onsubmit="handleLoanSubmit(event)" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Nama Peminjam <span class="text-red-500">*</span></label>
+                    <input type="text" id="loan-borrower" placeholder="Masukkan nama siswa / anggota" required class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Pilih Judul Buku <span class="text-red-500">*</span></label>
+                    <select id="loan-title-select" onchange="onLoanTitleChange()" required class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                        <option value="">-- Pilih Judul Buku --</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Nomor Inventaris (Eksemplar Tersedia) <span class="text-red-500">*</span></label>
+                    <select id="loan-code-select" required class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                        <option value="">-- Pilih Judul Terlebih Dahulu --</option>
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Tanggal Pinjam <span class="text-red-500">*</span></label>
+                        <input type="date" id="loan-date" required onchange="autoSetDueDate()" class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Tanggal Jatuh Tempo <span class="text-red-500">*</span></label>
+                        <input type="date" id="loan-due-date" required class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                    </div>
+                </div>
+
+                <div class="p-3 bg-amber-50 rounded-xl border border-amber-200/60 text-[11px] text-amber-800 space-y-1">
+                    <p class="font-bold"><i class="fa-solid fa-circle-info"></i> Ketentuan Denda:</p>
+                    <p>• Tarif: Rp 1.000 / hari keterlambatan.</p>
+                    <p>• Hari <strong>Sabtu & Minggu TIDAK dihitung</strong> denda.</p>
+                </div>
+
+                <div class="pt-3 flex justify-end gap-2 border-t border-slate-100">
+                    <button type="button" onclick="closeLoanModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-xs">Batal</button>
+                    <button type="submit" class="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl text-xs shadow-md shadow-brand-600/20">Proses Peminjaman</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 3: RETURN & FINE OVERRIDE -->
+    <div id="return-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden">
+            <div class="p-5 bg-slate-900 text-white flex justify-between items-center">
+                <h3 class="font-bold text-base">Proses Pengembalian Buku</h3>
+                <button onclick="closeReturnModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form id="return-form" onsubmit="handleReturnSubmit(event)" class="p-6 space-y-4">
+                <input type="hidden" id="return-loan-id">
+
+                <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1 text-xs">
+                    <p><strong>Peminjam:</strong> <span id="return-borrower-name">-</span></p>
+                    <p><strong>Buku:</strong> <span id="return-book-title">-</span></p>
+                    <p><strong>Kode Inventaris:</strong> <span id="return-inv-code">-</span></p>
+                    <p><strong>Tanggal Jatuh Tempo:</strong> <span id="return-due-date">-</span></p>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Tanggal Dikembalikan Hari Ini</label>
+                    <input type="date" id="return-actual-date" required onchange="recalculateReturnFine()" class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                </div>
+
+                <div class="p-3 bg-slate-100 rounded-xl border border-slate-200 space-y-2">
+                    <div class="flex justify-between items-center text-xs">
+                        <span class="text-slate-600">Terlambat (Exclude Weekend):</span>
+                        <span class="font-bold text-slate-800" id="return-late-days">0 Hari Kerja</span>
+                    </div>
+                    <div class="flex justify-between items-center text-xs">
+                        <span class="text-slate-600">Denda Terhitung Otomatis:</span>
+                        <span class="font-bold text-brand-600" id="return-calculated-fine">Rp 0</span>
+                    </div>
+                </div>
+
+                <!-- Manual Override Fine -->
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="block text-xs font-semibold text-slate-700">Denda Final (Dapat Diedit Manual)</label>
+                        <span class="text-[10px] text-indigo-600 font-semibold">Override Manual</span>
+                    </div>
+                    <div class="relative">
+                        <span class="absolute left-3 top-2 text-xs text-slate-400">Rp</span>
+                        <input type="number" id="return-final-fine" min="0" required class="w-full pl-9 pr-3.5 py-2 bg-white border border-brand-300 rounded-xl text-xs font-bold text-slate-800 focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                    </div>
+                    <p class="text-[10px] text-slate-500 mt-1">Petugas dapat mengedit nominal denda di atas jika ada pembebasan / denda khusus.</p>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Catatan / Alasan Denda (Opsional)</label>
+                    <input type="text" id="return-fine-note" placeholder="Misal: Keterlambatan dimaklumi / pembebasan" class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                </div>
+
+                <div class="pt-3 flex justify-end gap-2 border-t border-slate-100">
+                    <button type="button" onclick="closeReturnModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-xs">Batal</button>
+                    <button type="submit" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-xs shadow-md shadow-emerald-600/20">Konfirmasi Pengembalian</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <script>
+        /* ==========================================================================
+           1. SEED DATA & INITIALIZATION
+           ========================================================================== */
+        const STORAGE_KEY_BOOKS = 'SIPUS_BOOKS_DATA_V1';
+        const STORAGE_KEY_LOANS = 'SIPUS_LOANS_DATA_V1';
+        const STORAGE_KEY_PROFILE = 'SIPUS_PROFILE_DATA_V1';
+
+        const defaultProfile = {
+            name: "Perpustakaan Utama Nusantara",
+            phone: "(021) 555-8899 / 0812-3456-7890",
+            hours: "Senin - Jumat, 08:00 - 16:00 WIB",
+            address: "Jl. Pendidikan No. 45, Kecamatan Cendekia, Kota Administrasi Jakarta Pusat",
+            logo: ""
+        };
+
+        const defaultBooks = [
+            { id: 'b1', title: 'Laskar Pelangi', code: 'INV-2024-001', author: 'Andrea Hirata', year: 2005, cover: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=150&auto=format&fit=crop&q=60' },
+            { id: 'b2', title: 'Laskar Pelangi', code: 'INV-2024-002', author: 'Andrea Hirata', year: 2005, cover: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=150&auto=format&fit=crop&q=60' },
+            { id: 'b3', title: 'Bumi Manusia', code: 'INV-2024-003', author: 'Pramoedya Ananta Toer', year: 1980, cover: 'https://images.unsplash.com/photo-1512820790803-83ca734da794?w=150&auto=format&fit=crop&q=60' },
+            { id: 'b4', title: 'Bumi Manusia', code: 'INV-2024-004', author: 'Pramoedya Ananta Toer', year: 1980, cover: 'https://images.unsplash.com/photo-1512820790803-83ca734da794?w=150&auto=format&fit=crop&q=60' },
+            { id: 'b5', title: 'Filosofi Teras', code: 'INV-2025-010', author: 'Henry Manampiring', year: 2018, cover: 'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=150&auto=format&fit=crop&q=60' }
+        ];
+
+        const defaultLoans = [
+            {
+                id: 'LN-1001',
+                borrower: 'Budi Santoso',
+                bookTitle: 'Laskar Pelangi',
+                bookCode: 'INV-2024-001',
+                loanDate: '2026-09-20',
+                dueDate: '2026-09-27',
+                returnDate: '2026-09-30',
+                lateDays: 2, // Exclude weekend
+                fineAmount: 2000,
+                fineNote: 'Lunas',
+                status: 'DIKEMBALIKAN'
+            },
+            {
+                id: 'LN-1002',
+                borrower: 'Siti Rahma',
+                bookTitle: 'Bumi Manusia',
+                bookCode: 'INV-2024-003',
+                loanDate: '2026-09-28',
+                dueDate: '2026-10-02',
+                returnDate: null,
+                lateDays: 0,
+                fineAmount: 0,
+                fineNote: '',
+                status: 'DIPINJAM'
+            }
+        ];
+
+        // State Management
+        let books = JSON.parse(localStorage.getItem(STORAGE_KEY_BOOKS)) || defaultBooks;
+        let loans = JSON.parse(localStorage.getItem(STORAGE_KEY_LOANS)) || defaultLoans;
+        let profile = JSON.parse(localStorage.getItem(STORAGE_KEY_PROFILE)) || defaultProfile;
+
+        function saveData() {
+            localStorage.setItem(STORAGE_KEY_BOOKS, JSON.stringify(books));
+            localStorage.setItem(STORAGE_KEY_LOANS, JSON.stringify(loans));
+            localStorage.setItem(STORAGE_KEY_PROFILE, JSON.stringify(profile));
+        }
+
+        // Initialize UI on Load
+        window.onload = function() {
+            document.getElementById('currentDateDisplay').innerText = new Date().toLocaleDateString('id-ID', {
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+            });
+            updateProfileUI();
+            renderDashboard();
+            renderCatalog();
+            renderLoans();
+            renderReports();
+        };
+
+        /* ==========================================================================
+           2. DATE & FINE CALCULATION LOGIC (EXCLUDING SATURDAYS & SUNDAYS)
+           ========================================================================== */
+        /**
+         * Calculates working days delayed between dueDate and actualReturnDate.
+         * Explicitly excludes Saturdays (day 6) and Sundays (day 0).
+         */
+        function calculateWorkingDaysLate(dueDateStr, actualDateStr) {
+            const due = new Date(dueDateStr);
+            const actual = new Date(actualDateStr);
+
+            // Reset time portions for pure date comparison
+            due.setHours(0, 0, 0, 0);
+            actual.setHours(0, 0, 0, 0);
+
+            if (actual <= due) return 0;
+
+            let workingDaysLate = 0;
+            let cur = new Date(due);
+            cur.setDate(cur.getDate() + 1); // Start counting from day after due date
+
+            while (cur <= actual) {
+                const dayOfWeek = cur.getDay(); // 0 = Sunday, 6 = Saturday
+                if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+                    workingDaysLate++;
+                }
+                cur.setDate(cur.getDate() + 1);
+            }
+
+            return workingDaysLate;
+        }
+
+        function calculateFineAmount(lateDays) {
+            const RATE_PER_DAY = 1000;
+            return lateDays * RATE_PER_DAY;
+        }
+
+        /* ==========================================================================
+           3. UI NAVIGATION & TABS
+           ========================================================================== */
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('sidebar-item-active');
+                btn.classList.add('text-slate-400');
+            });
+
+            document.getElementById(`view-${tabName}`).classList.remove('hidden');
+            const activeNav = document.getElementById(`nav-${tabName}`);
+            activeNav.classList.add('sidebar-item-active');
+            activeNav.classList.remove('text-slate-400');
+
+            const titles = {
+                dashboard: 'Dashboard Ringkasan',
+                katalog: 'Katalog Buku & Agregat Eksemplar',
+                peminjaman: 'Peminjaman & Pengembalian Buku',
+                laporan: 'Laporan Transaksi & Keuangan Denda',
+                profil: 'Profil Perpustakaan'
+            };
+            document.getElementById('pageTitle').innerText = titles[tabName] || 'Perpustakaan';
+
+            // Refresh view data
+            if (tabName === 'dashboard') renderDashboard();
+            if (tabName === 'katalog') renderCatalog();
+            if (tabName === 'peminjaman') renderLoans();
+            if (tabName === 'laporan') renderReports();
+        }
+
+        /* ==========================================================================
+           4. DASHBOARD RENDER
+           ========================================================================== */
+        function renderDashboard() {
+            // Group books by title for KPI
+            const titleMap = {};
+            books.forEach(b => {
+                const key = b.title.trim().toLowerCase();
+                if (!titleMap[key]) titleMap[key] = [];
+                titleMap[key].push(b);
+            });
+
+            const totalTitles = Object.keys(titleMap).length;
+            const totalCopies = books.length;
+            const activeLoans = loans.filter(l => l.status === 'DIPINJAM').length;
+            const totalFines = loans.reduce((sum, l) => sum + (l.fineAmount || 0), 0);
+
+            document.getElementById('kpi-total-titles').innerText = totalTitles;
+            document.getElementById('kpi-total-copies').innerText = totalCopies;
+            document.getElementById('kpi-active-loans').innerText = activeLoans;
+            document.getElementById('kpi-total-fines').innerText = 'Rp ' + totalFines.toLocaleString('id-ID');
+
+            // Render Recent Active Loans
+            const dashLoansTbody = document.getElementById('dash-loans-tbody');
+            dashLoansTbody.innerHTML = '';
+
+            const activeList = loans.filter(l => l.status === 'DIPINJAM').slice(0, 5);
+            if (activeList.length === 0) {
+                dashLoansTbody.innerHTML = `<tr><td colspan="4" class="p-3 text-center text-slate-400">Tidak ada peminjaman aktif saat ini.</td></tr>`;
+            } else {
+                activeList.forEach(l => {
+                    const todayStr = new Date().toISOString().split('T')[0];
+                    const lateDays = calculateWorkingDaysLate(l.dueDate, todayStr);
+                    const isOverdue = lateDays > 0;
+
+                    dashLoansTbody.innerHTML += `
+                        <tr class="hover:bg-slate-50">
+                            <td class="p-2.5 font-semibold text-slate-800">${escapeHtml(l.borrower)}</td>
+                            <td class="p-2.5 text-slate-600">${escapeHtml(l.bookTitle)} <span class="text-[10px] text-slate-400">(${escapeHtml(l.bookCode)})</span></td>
+                            <td class="p-2.5 text-slate-600">${l.dueDate}</td>
+                            <td class="p-2.5 text-right">
+                                ${isOverdue 
+                                    ? `<span class="px-2 py-0.5 rounded-md bg-red-100 text-red-700 font-bold text-[10px]">Terlambat ${lateDays} hr</span>` 
+                                    : `<span class="px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 font-medium text-[10px]">Dipinjam</span>`}
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+
+            // Render Stock Overview
+            const dashStockTbody = document.getElementById('dash-stock-tbody');
+            dashStockTbody.innerHTML = '';
+
+            Object.keys(titleMap).slice(0, 5).forEach(key => {
+                const group = titleMap[key];
+                const title = group[0].title;
+                const totalGroup = group.length;
+                const borrowedCount = loans.filter(l => l.status === 'DIPINJAM' && group.some(g => g.code === l.bookCode)).length;
+                const availableCount = totalGroup - borrowedCount;
+
+                dashStockTbody.innerHTML += `
+                    <tr class="hover:bg-slate-50">
+                        <td class="p-2.5 font-semibold text-slate-800">${escapeHtml(title)}</td>
+                        <td class="p-2.5 text-center font-bold text-slate-700">${totalGroup}</td>
+                        <td class="p-2.5 text-center font-bold text-emerald-600">${availableCount}</td>
+                        <td class="p-2.5 text-center font-bold text-amber-600">${borrowedCount}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        /* ==========================================================================
+           5. KATALOG & AGGREGATE COPIES MANAGEMENT
+           ========================================================================== */
+        function renderCatalog() {
+            const query = (document.getElementById('catalog-search').value || '').toLowerCase();
+            const tbody = document.getElementById('catalog-aggregated-tbody');
+            tbody.innerHTML = '';
+
+            // Grouping by title (Case-insensitive matching)
+            const grouped = {};
+            books.forEach(b => {
+                const key = b.title.trim().toLowerCase();
+                if (!grouped[key]) {
+                    grouped[key] = {
+                        title: b.title,
+                        author: b.author,
+                        year: b.year,
+                        cover: b.cover,
+                        copies: []
+                    };
+                }
+                grouped[key].copies.push(b);
+            });
+
+            const groupKeys = Object.keys(grouped);
+            if (groupKeys.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-400">Belum ada data buku. Klik 'Tambah Item Buku' untuk mengisi.</td></tr>`;
+                return;
+            }
+
+            let renderedCount = 0;
+            groupKeys.forEach(key => {
+                const item = grouped[key];
+                
+                // Filter matching
+                const matchesSearch = item.title.toLowerCase().includes(query) ||
+                                      item.author.toLowerCase().includes(query) ||
+                                      item.copies.some(c => c.code.toLowerCase().includes(query));
+
+                if (!matchesSearch) return;
+                renderedCount++;
+
+                const totalCopies = item.copies.length;
+                const borrowedCopies = item.copies.filter(c => loans.some(l => l.bookCode === c.code && l.status === 'DIPINJAM')).length;
+                const availableCopies = totalCopies - borrowedCopies;
+
+                // Build Inventory Badge HTML
+                let codesHTML = item.copies.map(c => {
+                    const isBorrowed = loans.some(l => l.bookCode === c.code && l.status === 'DIPINJAM');
+                    const badgeColor = isBorrowed ? 'bg-amber-100 text-amber-800 border-amber-200' : 'bg-emerald-100 text-emerald-800 border-emerald-200';
+                    const statusText = isBorrowed ? 'Dipinjam' : 'Tersedia';
+
+                    return `
+                        <div class="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border text-[11px] font-mono ${badgeColor} mr-1 mb-1">
+                            <span>${escapeHtml(c.code)}</span>
+                            <span class="text-[9px] opacity-75">(${statusText})</span>
+                            <button onclick="editSingleBook('${c.id}')" class="text-slate-500 hover:text-brand-600 ml-1" title="Edit Kode/Info"><i class="fa-solid fa-pen"></i></button>
+                            <button onclick="deleteSingleBook('${c.id}')" class="text-slate-500 hover:text-red-600 ml-0.5" title="Hapus Eksemplar Ini"><i class="fa-solid fa-trash-can"></i></button>
+                        </div>
+                    `;
+                }).join('');
+
+                const defaultCover = 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=120&auto=format&fit=crop&q=60';
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50/80 transition">
+                        <td class="p-3">
+                            <img src="${item.cover || defaultCover}" onerror="this.src='${defaultCover}'" class="w-10 h-14 object-cover rounded-md shadow-sm border">
+                        </td>
+                        <td class="p-3">
+                            <p class="font-bold text-slate-800 text-xs">${escapeHtml(item.title)}</p>
+                            <p class="text-[11px] text-slate-500"><i class="fa-regular fa-user"></i> ${escapeHtml(item.author)}</p>
+                        </td>
+                        <td class="p-3 text-center text-slate-600 font-medium">${item.year}</td>
+                        <td class="p-3 text-center">
+                            <span class="px-2.5 py-1 bg-emerald-50 text-emerald-700 font-bold rounded-lg border border-emerald-200">${availableCopies} / ${totalCopies}</span>
+                        </td>
+                        <td class="p-3 text-center">
+                            <span class="px-2.5 py-1 bg-amber-50 text-amber-700 font-bold rounded-lg border border-amber-200">${borrowedCopies}</span>
+                        </td>
+                        <td class="p-3 max-w-xs">
+                            <div class="flex flex-wrap">${codesHTML}</div>
+                        </td>
+                        <td class="p-3 text-center">
+                            <button onclick="addAnotherCopy('${escapeHtml(item.title)}', '${escapeHtml(item.author)}', ${item.year}, '${escapeHtml(item.cover || '')}')" class="px-2.5 py-1.5 bg-slate-100 hover:bg-brand-50 hover:text-brand-600 text-slate-700 font-medium rounded-lg text-[11px] transition flex items-center justify-center gap-1 mx-auto">
+                                <i class="fa-solid fa-plus text-xs"></i> Tambah Kode
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            if (renderedCount === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-400">Tidak ditemukan data yang sesuai dengan pencarian.</td></tr>`;
+            }
+        }
+
+        function openBookModal(isEdit = false) {
+            document.getElementById('book-form').reset();
+            document.getElementById('book-edit-id').value = '';
+            document.getElementById('book-modal-title').innerText = isEdit ? 'Edit Data Eksemplar Buku' : 'Tambah Eksemplar Buku Baru';
+            document.getElementById('book-modal').classList.remove('hidden');
+        }
+
+        function closeBookModal() {
+            document.getElementById('book-modal').classList.add('hidden');
+        }
+
+        function handleBookSubmit(e) {
+            e.preventDefault();
+            const editId = document.getElementById('book-edit-id').value;
+            const title = document.getElementById('book-title').value.trim();
+            const code = document.getElementById('book-code').value.trim();
+            const author = document.getElementById('book-author').value.trim();
+            const year = parseInt(document.getElementById('book-year').value);
+            const cover = document.getElementById('book-cover').value.trim();
+
+            // Check duplicate code
+            const isCodeExists = books.some(b => b.code.toLowerCase() === code.toLowerCase() && b.id !== editId);
+            if (isCodeExists) {
+                showToast('Nomor Inventaris (Kode Unik) sudah digunakan!', 'error');
+                return;
+            }
+
+            if (editId) {
+                // Edit
+                const idx = books.findIndex(b => b.id === editId);
+                if (idx !== -1) {
+                    books[idx] = { ...books[idx], title, code, author, year, cover };
+                    showToast('Data eksemplar berhasil diperbarui.');
+                }
+            } else {
+                // Add
+                const newBook = {
+                    id: 'b_' + Date.now(),
+                    title,
+                    code,
+                    author,
+                    year,
+                    cover
+                };
+                books.push(newBook);
+                showToast('Buku/Eksemplar baru berhasil ditambahkan.');
+            }
+
+            saveData();
+            closeBookModal();
+            renderCatalog();
+            renderDashboard();
+        }
+
+        function editSingleBook(bookId) {
+            const b = books.find(x => x.id === bookId);
+            if (!b) return;
+
+            document.getElementById('book-edit-id').value = b.id;
+            document.getElementById('book-title').value = b.title;
+            document.getElementById('book-code').value = b.code;
+            document.getElementById('book-author').value = b.author;
+            document.getElementById('book-year').value = b.year;
+            document.getElementById('book-cover').value = b.cover || '';
+
+            openBookModal(true);
+        }
+
+        function addAnotherCopy(title, author, year, cover) {
+            document.getElementById('book-form').reset();
+            document.getElementById('book-edit-id').value = '';
+            document.getElementById('book-title').value = title;
+            document.getElementById('book-author').value = author;
+            document.getElementById('book-year').value = year;
+            document.getElementById('book-cover').value = cover;
+
+            document.getElementById('book-modal-title').innerText = `Tambah Kode Inventaris Baru untuk "${title}"`;
+            document.getElementById('book-modal').classList.remove('hidden');
+        }
+
+        function deleteSingleBook(bookId) {
+            const b = books.find(x => x.id === bookId);
+            if (!b) return;
+
+            // Check if currently borrowed
+            const isBorrowed = loans.some(l => l.bookCode === b.code && l.status === 'DIPINJAM');
+            if (isBorrowed) {
+                showToast('Buku tidak dapat dihapus karena sedang dipinjam!', 'error');
+                return;
+            }
+
+            if (confirm(`Apakah Anda yakin ingin menghapus eksemplar dengan kode ${b.code}?`)) {
+                books = books.filter(x => x.id !== bookId);
+                saveData();
+                renderCatalog();
+                renderDashboard();
+                showToast('Eksemplar buku berhasil dihapus.');
+            }
+        }
+
+        /* ==========================================================================
+           6. PEMINJAMAN & PENGEMBALIAN MANAGEMENT
+           ========================================================================== */
+        function renderLoans() {
+            const query = (document.getElementById('loan-search')?.value || '').toLowerCase();
+            const tbody = document.getElementById('active-loans-tbody');
+            tbody.innerHTML = '';
+
+            const activeLoans = loans.filter(l => l.status === 'DIPINJAM');
+
+            if (activeLoans.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" class="p-6 text-center text-slate-400">Tidak ada peminjaman buku yang aktif saat ini.</td></tr>`;
+                return;
+            }
+
+            const todayStr = new Date().toISOString().split('T')[0];
+
+            activeLoans.forEach(l => {
+                if (query && !l.borrower.toLowerCase().includes(query) && !l.bookTitle.toLowerCase().includes(query) && !l.bookCode.toLowerCase().includes(query)) {
+                    return;
+                }
+
+                const lateDays = calculateWorkingDaysLate(l.dueDate, todayStr);
+                const fineEst = calculateFineAmount(lateDays);
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="p-3.5 font-mono text-[11px] font-bold text-slate-600">${l.id}</td>
+                        <td class="p-3.5 font-bold text-slate-800">${escapeHtml(l.borrower)}</td>
+                        <td class="p-3.5">
+                            <p class="font-semibold text-slate-800">${escapeHtml(l.bookTitle)}</p>
+                            <span class="inline-block px-2 py-0.5 rounded bg-slate-100 border text-[10px] font-mono text-slate-600">${escapeHtml(l.bookCode)}</span>
+                        </td>
+                        <td class="p-3.5 text-slate-600">${l.loanDate}</td>
+                        <td class="p-3.5 text-slate-600 font-semibold">${l.dueDate}</td>
+                        <td class="p-3.5 text-center font-bold ${lateDays > 0 ? 'text-red-600' : 'text-slate-500'}">
+                            ${lateDays} Hari
+                        </td>
+                        <td class="p-3.5 text-center font-bold ${fineEst > 0 ? 'text-red-600' : 'text-emerald-600'}">
+                            Rp ${fineEst.toLocaleString('id-ID')}
+                        </td>
+                        <td class="p-3.5 text-center">
+                            ${lateDays > 0 
+                                ? `<span class="px-2.5 py-1 rounded-full bg-red-100 text-red-800 font-bold text-[10px]">Terlambat</span>` 
+                                : `<span class="px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 font-bold text-[10px]">Dipinjam</span>`}
+                        </td>
+                        <td class="p-3.5 text-center">
+                            <button onclick="openReturnModal('${l.id}')" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold text-[11px] shadow-sm transition flex items-center gap-1.5 mx-auto">
+                                <i class="fa-solid fa-arrow-left-long"></i> Kembalikan
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function openLoanModal() {
+            document.getElementById('loan-form').reset();
+            
+            // Set default loan date = today, due date = 7 days later
+            const today = new Date();
+            const todayStr = today.toISOString().split('T')[0];
+            const nextWeek = new Date(today);
+            nextWeek.setDate(nextWeek.getDate() + 7);
+            const nextWeekStr = nextWeek.toISOString().split('T')[0];
+
+            document.getElementById('loan-date').value = todayStr;
+            document.getElementById('loan-due-date').value = nextWeekStr;
+
+            // Populate Book Title Dropdown (Unique Available Titles)
+            const titleSelect = document.getElementById('loan-title-select');
+            titleSelect.innerHTML = `<option value="">-- Pilih Judul Buku --</option>`;
+
+            // Group available copies
+            const titleMap = {};
+            books.forEach(b => {
+                const isBorrowed = loans.some(l => l.bookCode === b.code && l.status === 'DIPINJAM');
+                if (!isBorrowed) {
+                    if (!titleMap[b.title]) titleMap[b.title] = 0;
+                    titleMap[b.title]++;
+                }
+            });
+
+            Object.keys(titleMap).forEach(title => {
+                titleSelect.innerHTML += `<option value="${escapeHtml(title)}">${escapeHtml(title)} (${titleMap[title]} stok tersedia)</option>`;
+            });
+
+            document.getElementById('loan-code-select').innerHTML = `<option value="">-- Pilih Judul Terlebih Dahulu --</option>`;
+            document.getElementById('loan-modal').classList.remove('hidden');
+        }
+
+        function closeLoanModal() {
+            document.getElementById('loan-modal').classList.add('hidden');
+        }
+
+        function autoSetDueDate() {
+            const loanDateVal = document.getElementById('loan-date').value;
+            if (loanDateVal) {
+                const d = new Date(loanDateVal);
+                d.setDate(d.getDate() + 7);
+                document.getElementById('loan-due-date').value = d.toISOString().split('T')[0];
+            }
+        }
+
+        function onLoanTitleChange() {
+            const selectedTitle = document.getElementById('loan-title-select').value;
+            const codeSelect = document.getElementById('loan-code-select');
+            codeSelect.innerHTML = '';
+
+            if (!selectedTitle) {
+                codeSelect.innerHTML = `<option value="">-- Pilih Judul Terlebih Dahulu --</option>`;
+                return;
+            }
+
+            // Filter available codes for this title
+            const availableCopies = books.filter(b => b.title === selectedTitle && !loans.some(l => l.bookCode === b.code && l.status === 'DIPINJAM'));
+
+            if (availableCopies.length === 0) {
+                codeSelect.innerHTML = `<option value="">-- Stok Habis / Sedang Dipinjam --</option>`;
+            } else {
+                availableCopies.forEach(c => {
+                    codeSelect.innerHTML += `<option value="${escapeHtml(c.code)}">${escapeHtml(c.code)} (Tahun: ${c.year})</option>`;
+                });
+            }
+        }
+
+        function handleLoanSubmit(e) {
+            e.preventDefault();
+            const borrower = document.getElementById('loan-borrower').value.trim();
+            const title = document.getElementById('loan-title-select').value;
+            const code = document.getElementById('loan-code-select').value;
+            const loanDate = document.getElementById('loan-date').value;
+            const dueDate = document.getElementById('loan-due-date').value;
+
+            if (!code) {
+                showToast('Silakan pilih nomor inventaris yang tersedia!', 'error');
+                return;
+            }
+
+            const newLoan = {
+                id: 'LN-' + Math.floor(1000 + Math.random() * 9000),
+                borrower,
+                bookTitle: title,
+                bookCode: code,
+                loanDate,
+                dueDate,
+                returnDate: null,
+                lateDays: 0,
+                fineAmount: 0,
+                fineNote: '',
+                status: 'DIPINJAM'
+            };
+
+            loans.push(newLoan);
+            saveData();
+            closeLoanModal();
+            renderLoans();
+            renderDashboard();
+            renderCatalog();
+            showToast('Transaksi peminjaman berhasil dicatat!');
+        }
+
+        /* Return & Fine Override Modal Logic */
+        function openReturnModal(loanId) {
+            const l = loans.find(x => x.id === loanId);
+            if (!l) return;
+
+            document.getElementById('return-loan-id').value = l.id;
+            document.getElementById('return-borrower-name').innerText = l.borrower;
+            document.getElementById('return-book-title').innerText = l.bookTitle;
+            document.getElementById('return-inv-code').innerText = l.bookCode;
+            document.getElementById('return-due-date').innerText = l.dueDate;
+
+            const todayStr = new Date().toISOString().split('T')[0];
+            document.getElementById('return-actual-date').value = todayStr;
+            document.getElementById('return-fine-note').value = '';
+
+            recalculateReturnFine();
+            document.getElementById('return-modal').classList.remove('hidden');
+        }
+
+        function closeReturnModal() {
+            document.getElementById('return-modal').classList.add('hidden');
+        }
+
+        function recalculateReturnFine() {
+            const loanId = document.getElementById('return-loan-id').value;
+            const l = loans.find(x => x.id === loanId);
+            if (!l) return;
+
+            const actualDate = document.getElementById('return-actual-date').value;
+            if (!actualDate) return;
+
+            const lateDays = calculateWorkingDaysLate(l.dueDate, actualDate);
+            const calculatedFine = calculateFineAmount(lateDays);
+
+            document.getElementById('return-late-days').innerText = `${lateDays} Hari Kerja`;
+            document.getElementById('return-calculated-fine').innerText = `Rp ${calculatedFine.toLocaleString('id-ID')}`;
+            document.getElementById('return-final-fine').value = calculatedFine;
+        }
+
+        function handleReturnSubmit(e) {
+            e.preventDefault();
+            const loanId = document.getElementById('return-loan-id').value;
+            const idx = loans.findIndex(x => x.id === loanId);
+            if (idx === -1) return;
+
+            const actualDate = document.getElementById('return-actual-date').value;
+            const finalFine = parseInt(document.getElementById('return-final-fine').value) || 0;
+            const fineNote = document.getElementById('return-fine-note').value.trim();
+            const lateDays = calculateWorkingDaysLate(loans[idx].dueDate, actualDate);
+
+            loans[idx].returnDate = actualDate;
+            loans[idx].lateDays = lateDays;
+            loans[idx].fineAmount = finalFine;
+            loans[idx].fineNote = fineNote;
+            loans[idx].status = 'DIKEMBALIKAN';
+
+            saveData();
+            closeReturnModal();
+            renderLoans();
+            renderDashboard();
+            renderCatalog();
+            renderReports();
+            showToast('Buku berhasil dikembalikan!');
+        }
+
+        /* ==========================================================================
+           7. REPORTS & EXPORT (BULANAN & TAHUNAN)
+           ========================================================================== */
+        function renderReports() {
+            const monthFilter = document.getElementById('report-month-filter').value;
+            const yearFilter = document.getElementById('report-year-filter').value;
+            const statusFilter = document.getElementById('report-status-filter').value;
+
+            const tbody = document.getElementById('report-tbody');
+            tbody.innerHTML = '';
+
+            let filtered = loans.filter(l => {
+                const dateObj = new Date(l.loanDate);
+                const month = dateObj.getMonth().toString();
+                const year = dateObj.getFullYear().toString();
+
+                if (monthFilter !== 'ALL' && month !== monthFilter) return false;
+                if (yearFilter !== 'ALL' && year !== yearFilter) return false;
+                if (statusFilter !== 'ALL' && l.status !== statusFilter) return false;
+
+                return true;
+            });
+
+            // Update stats
+            const totalReturned = filtered.filter(l => l.status === 'DIKEMBALIKAN').length;
+            const totalFines = filtered.reduce((sum, l) => sum + (l.fineAmount || 0), 0);
+
+            document.getElementById('report-stat-count').innerText = filtered.length;
+            document.getElementById('report-stat-returned').innerText = totalReturned;
+            document.getElementById('report-stat-fines').innerText = 'Rp ' + totalFines.toLocaleString('id-ID');
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="10" class="p-6 text-center text-slate-400">Tidak ada transaksi yang cocok dengan filter.</td></tr>`;
+                return;
+            }
+
+            filtered.forEach((l, index) => {
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50">
+                        <td class="p-3 text-slate-500 font-mono">${index + 1}</td>
+                        <td class="p-3 font-bold text-slate-800">${escapeHtml(l.borrower)}</td>
+                        <td class="p-3 text-slate-800 font-semibold">${escapeHtml(l.bookTitle)}</td>
+                        <td class="p-3 font-mono text-slate-600">${escapeHtml(l.bookCode)}</td>
+                        <td class="p-3 text-slate-600">${l.loanDate}</td>
+                        <td class="p-3 text-slate-600">${l.dueDate}</td>
+                        <td class="p-3 text-slate-600">${l.returnDate || '-'}</td>
+                        <td class="p-3 text-right font-bold ${l.fineAmount > 0 ? 'text-red-600' : 'text-slate-600'}">
+                            Rp ${(l.fineAmount || 0).toLocaleString('id-ID')}
+                        </td>
+                        <td class="p-3 text-center text-slate-500 italic">${escapeHtml(l.fineNote || '-')}</td>
+                        <td class="p-3 text-center">
+                            ${l.status === 'DIKEMBALIKAN' 
+                                ? `<span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-semibold text-[10px]">Dikembalikan</span>` 
+                                : `<span class="px-2 py-0.5 rounded bg-amber-100 text-amber-800 font-semibold text-[10px]">Dipinjam</span>`}
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function exportToExcel() {
+            const monthFilter = document.getElementById('report-month-filter').value;
+            const yearFilter = document.getElementById('report-year-filter').value;
+
+            const reportData = loans.map((l, idx) => ({
+                'No': idx + 1,
+                'ID Transaksi': l.id,
+                'Nama Peminjam': l.borrower,
+                'Judul Buku': l.bookTitle,
+                'Kode Inventaris': l.bookCode,
+                'Tanggal Pinjam': l.loanDate,
+                'Tanggal Jatuh Tempo': l.dueDate,
+                'Tanggal Pengembalian': l.returnDate || '-',
+                'Terlambat (Hari Kerja)': l.lateDays || 0,
+                'Denda (Rp)': l.fineAmount || 0,
+                'Catatan Denda': l.fineNote || '-',
+                'Status': l.status
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(reportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Laporan Peminjaman");
+
+            const fileName = `Laporan_Perpustakaan_${monthFilter}_${yearFilter}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+            showToast('File Excel berhasil diunduh!');
+        }
+
+        function printReport() {
+            window.print();
+        }
+
+        /* ==========================================================================
+           8. PROFIL PERPUSTAKAAN MANAGEMENT
+           ========================================================================== */
+        function updateProfileUI() {
+            document.getElementById('prof-name').value = profile.name;
+            document.getElementById('prof-phone').value = profile.phone;
+            document.getElementById('prof-hours').value = profile.hours;
+            document.getElementById('prof-address').value = profile.address;
+            document.getElementById('prof-logo').value = profile.logo || '';
+
+            // Update Header/Sidebar Live
+            document.getElementById('sidebarLibName').innerText = profile.name;
+            document.getElementById('sidebarFooterName').innerText = profile.name;
+            document.getElementById('printHeaderLibName').innerText = profile.name;
+            document.getElementById('printHeaderAddress').innerText = profile.address;
+            document.getElementById('printHeaderContact').innerText = `Telp/Kontak: ${profile.phone} | Jam: ${profile.hours}`;
+
+            if (profile.logo) {
+                document.getElementById('sidebarLogoContainer').innerHTML = `<img src="${profile.logo}" class="w-full h-full object-cover rounded-lg">`;
+            } else {
+                document.getElementById('sidebarLogoContainer').innerHTML = `<i class="fa-solid fa-book-bookmark"></i>`;
+            }
+        }
+
+        function saveProfile(e) {
+            e.preventDefault();
+            profile = {
+                name: document.getElementById('prof-name').value.trim(),
+                phone: document.getElementById('prof-phone').value.trim(),
+                hours: document.getElementById('prof-hours').value.trim(),
+                address: document.getElementById('prof-address').value.trim(),
+                logo: document.getElementById('prof-logo').value.trim()
+            };
+
+            saveData();
+            updateProfileUI();
+            showToast('Profil perpustakaan berhasil disimpan!');
+        }
+
+        /* ==========================================================================
+           9. UTILITIES & TOAST NOTIFICATIONS
+           ========================================================================== */
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+
+            const bgClass = type === 'success' ? 'bg-slate-900 text-white border-brand-500' : 'bg-red-900 text-white border-red-500';
+            const icon = type === 'success' ? 'fa-circle-check text-emerald-400' : 'fa-circle-exclamation text-red-400';
+
+            toast.className = `pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl border shadow-xl text-xs font-medium transition duration-300 transform translate-y-2 opacity-0 ${bgClass}`;
+            toast.innerHTML = `<i class="fa-solid ${icon} text-base"></i> <span>${escapeHtml(message)}</span>`;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+    </script>
+</body>
+</html>
